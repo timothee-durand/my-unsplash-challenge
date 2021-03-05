@@ -14,12 +14,18 @@ const headersUnsplash = {
     "Authorization":"Client-ID 5JRhVE45Lfn2susc4wOzKsC9KFVeuWdhyGohsS_1H3c"
 }
 
+const password = 'admin';
 
 const init = async () => {
 
     const server = Hapi.server({
-        port: 3000,
-        host: 'localhost'
+        port: 8000,
+        host: 'localhost',
+        routes: {
+            cors: {
+                origin: ['*'], // an array of origins or 'ignore'
+            }
+        }
     });
 
     server.route({
@@ -31,74 +37,15 @@ const init = async () => {
         }
     });
 
-
-    server.route({
-        method: 'GET',
-        path: '/users',
-        handler: async (request, h) => {
-            try {
-                var person = await models.user.find().exec();
-                return h.response(person);
-            } catch (error) {
-                return h.response(error).code(500);
-            }
-        }
-    });
-
-    server.route({
-        method: "GET",
-        path: "/users/{id}",
-        handler: async (request, h) => {
-            try {
-                var person = await models.user.findById(request.params.id).exec();
-                return h.response(person);
-            } catch (error) {
-                return h.response(error).code(500);
-            }
-        }
-    });
-
-    server.route({
-        method: "POST",
-        path: "/users",
-        options: {
-            validate:{
-                payload: Joi.object({
-                    name: Joi.string().min(1).max(140).required(),
-                    password: Joi.string().min(6).required()
-                })
-            }
-        },
-        handler: async (request, h) => {
-            try {
-                let user = new models.user(request.payload);
-                let result = await user.save();
-                return h.response(result);
-            } catch (error) {
-                return h.response(error).code(500);
-            }
-        }
-    });
-
-    server.route({
-        method: "DELETE",
-        path: "/users/{id}",
-        handler: async (request, h) => {
-            try {
-                var result = await models.user.findByIdAndDelete(request.params.id);
-                return h.response(result);
-            } catch (error) {
-                return h.response(error).code(500);
-            }
-        }
-    });
-
     server.route({
         method: 'GET',
         path: '/images',
         handler: async (request, h) => {
             try {
                 var person = await models.image.find().exec();
+                person.forEach( function (person) {
+                    models.image.findByIdAndDelete(person.id);
+                })
                 return h.response(person);
             } catch (error) {
                 return h.response(error).code(500);
@@ -146,6 +93,7 @@ const init = async () => {
         path: "/images/{id}",
         handler: async (request, h) => {
             try {
+                console.log(request.params)
                 var result = await models.image.findByIdAndDelete(request.params.id);
                 return h.response(result);
             } catch (error) {
@@ -171,7 +119,7 @@ const init = async () => {
 
                     let _image = new models.image({
                         label:description,
-                        url:image.urls.raw
+                        url:image.urls.regular
                     })
                     _image.save();
 
