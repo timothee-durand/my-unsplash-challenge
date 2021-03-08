@@ -6,7 +6,7 @@ const axios = require("axios");
 var dayjs = require('dayjs')
 
 const db = require('./database').db;
-const models = require("./models").models;
+//const models = require("./models").models;
 
 const regExpUrl = /^(ftp|http|https):\/\/[^ "]+$/;
 
@@ -15,6 +15,7 @@ const headersUnsplash = {
 }
 
 const password = 'admin';
+const dbName = 'images';
 
 let port = process.env.PORT;
 if (port == null || port === "") {
@@ -48,14 +49,12 @@ const init = async () => {
         path: '/images',
         handler: async (request, h) => {
             try {
-                var person = await models.image.find().exec();
-                person.forEach( function (person) {
-                    models.image.findByIdAndDelete(person.id);
-                })
-                return h.response(person);
-            } catch (error) {
-                return h.response(error).code(500);
+                let data = await db(dbName).select("id","label", "url")
+                return h.response(data)
+            } catch (e) {
+                return h.response(e).code(500);
             }
+
         }
     });
 
@@ -64,10 +63,10 @@ const init = async () => {
         path: "/images/{id}",
         handler: async (request, h) => {
             try {
-                var person = await models.image.findById(request.params.id).exec();
-                return h.response(person);
-            } catch (error) {
-                return h.response(error).code(500);
+                let data = await db(dbName).select("id","label", "url").where("id", request.params.id)
+                return h.response(data)
+            } catch (e) {
+                return h.response(e).code(500);
             }
         }
     });
@@ -87,14 +86,15 @@ const init = async () => {
             try {
                 let image = {
                     label:request.payload.label,
-                    url:request.payload.url,
-                    creation_date:dayjs().toDate()
+                    url:request.payload.url
                 }
 
-                let user = new models.image(image);
-                let result = await user.save();
-                return h.response(result);
+                console.log(image);
+
+                let result = await db("images").insert(image)
+                return h.response("INSERT SUCEED").code(200);
             } catch (error) {
+                console.log(error)
                 return h.response(error).code(500);
             }
         }
@@ -106,8 +106,8 @@ const init = async () => {
         handler: async (request, h) => {
             try {
                 if(request.payload.password !== password) return h.response("WRONG PASSWORD").code(401);
-                var result = await models.image.findByIdAndDelete(request.params.id);
-                return h.response(result);
+                var result = await db(dbName).where("id", request.params.id).del()
+                return h.response("DELETE SUCCEED").code(200);
             } catch (error) {
                 return h.response(error).code(500);
             }
@@ -122,22 +122,26 @@ const init = async () => {
                 let result = await axios.get("https://api.unsplash.com/photos?page=1", {headers:headersUnsplash});
                 //console.log(result.data)
 
-                result.data.forEach(function (image) {
+                async function saveImg(img) {
+                    let result = await db("images").insert(img);
+                    console.log(result)
+                }
+                result.data.forEach((image) => {
                     //console.log(image)
                     let description = image.description;
                     if(description === null) {
                         description = image.alt_description
                     }
 
-                    let _image = new models.image({
+                    let _image = {
                         label:description,
                         url:image.urls.regular
-                    })
-                    _image.save();
+                    }
 
+                    saveImg(_image);
                 })
 
-                return {statut:200};
+                return  h.response("CRAWL SUCCEED").code(200);
             } catch (error) {
                 return h.response(error).code(500);
             }
