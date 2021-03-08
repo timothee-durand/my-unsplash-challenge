@@ -105,6 +105,7 @@ const init = async () => {
         path: "/images/{id}",
         handler: async (request, h) => {
             try {
+                if(request.params.id === "undefined") return h.response("IT'S FUCKING FALSE").code(404);
                 if(request.payload.password !== password) return h.response("WRONG PASSWORD").code(401);
                 var result = await db(dbName).where("id", request.params.id).del()
                 return h.response("DELETE SUCCEED").code(200);

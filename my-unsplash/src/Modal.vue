@@ -33,6 +33,7 @@ export default {
   border-radius: 12px;
   padding: 2.4rem 3.2rem;
   transition: transform 0.5s ease;
+  z-index: 30;
 }
 
 .modal-enter-from .modal,

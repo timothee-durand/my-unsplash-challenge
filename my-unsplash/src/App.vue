@@ -18,7 +18,7 @@
       <button type="button" class="button-green" @click="openAddModal">Add a photo</button>
     </header>
     <div class="masonry">
-      <ImageUnsplash v-for="image in images" :id="image._id" :key="image._id" :src="image.url" :label="image.label"
+      <ImageUnsplash v-for="image in images" :id="image.id" :key="image.id" :src="image.url" :label="image.label"
                      class="item" @delPhoto="openDelModal"/>
     </div>
 
@@ -54,12 +54,15 @@
           <input type="password" id="pswd" required placeholder="password" v-model="imageToDel.password"/>
         </div>
 
+        <p class="wrong-password-message" v-if="wrongPassword">Wrong password</p>
+
+
         <div class="flex end mt-2">
-          <button class="button-gey" type="button" @click="showDelete = false">Cancel</button>
+          <button class="button-gey" type="button" @click="closeDelModal">Cancel</button>
           <button class="button-green" type="submit">Submit</button>
         </div>
 
-        <p class="wrong-password-message" v-if="wrongPassword">Wrong password</p>
+
       </form>
     </Modal>
 
@@ -122,8 +125,13 @@ export default {
     searchImage() {
 
     },
+    closeDelModal() {
+      this.showDelete = false;
+      this.wrongPassword = false;
+      this.imageToDel.password = "";
+    },
     openDelModal(payload) {
-
+      console.log(payload)
       this.showDelete = true;
       this.imageToDel.id = payload;
       console.log(this.imageToDel)
@@ -148,6 +156,7 @@ export default {
       this.imagesApi = result.data
     },
     async delPhoto() {
+      console.log("heyyy")
       let result;
       try {
         result = await axios({
@@ -158,24 +167,17 @@ export default {
             'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
           }
         })
+
+        await this.getPhoto()
+        this.showDelete = false;
       } catch (e) {
-        console.log(e.data);
-        console.log("status", result.status)
-        if (e.status === 401) {
+        if (e.response.status === 401) {
           this.wrongPassword = true;
         } else {
           this.wrongPassword = false;
           await this.getPhoto()
           this.showDelete = false;
         }
-      }
-
-      if (result.status === 401) {
-        this.wrongPassword = true;
-      } else {
-        this.wrongPassword = false;
-        await this.getPhoto()
-        this.showDelete = false;
       }
 
 
@@ -315,6 +317,10 @@ button:hover, button:focus {
   color: #BDBDBD;
   display: block;
   padding: 0 1rem;
+}
+
+.wrong-password-message {
+  color: #EB5757;
 }
 
 
