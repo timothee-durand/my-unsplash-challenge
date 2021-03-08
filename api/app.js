@@ -16,11 +16,16 @@ const headersUnsplash = {
 
 const password = 'admin';
 
+let port = process.env.PORT;
+if (port == null || port === "") {
+    port = 8000;
+}
+
 const init = async () => {
     const date = new Date();
 
     const server = Hapi.server({
-        port: 8000,
+        port: port,
         host: 'localhost',
         routes: {
             cors: {
