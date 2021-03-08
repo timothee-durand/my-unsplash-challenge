@@ -3,7 +3,7 @@
 var Hapi = require('@hapi/hapi');
 const Joi = require("joi");
 const axios = require("axios");
-
+var dayjs = require('dayjs')
 
 const db = require('./database').db;
 const models = require("./models").models;
@@ -17,6 +17,7 @@ const headersUnsplash = {
 const password = 'admin';
 
 const init = async () => {
+    const date = new Date();
 
     const server = Hapi.server({
         port: 8000,
@@ -79,7 +80,13 @@ const init = async () => {
         },
         handler: async (request, h) => {
             try {
-                let user = new models.image(request.payload);
+                let image = {
+                    label:request.payload.label,
+                    url:request.payload.url,
+                    creation_date:dayjs().toDate()
+                }
+
+                let user = new models.image(image);
                 let result = await user.save();
                 return h.response(result);
             } catch (error) {
@@ -93,7 +100,7 @@ const init = async () => {
         path: "/images/{id}",
         handler: async (request, h) => {
             try {
-                console.log(request.params)
+                if(request.payload.password !== password) return h.response("WRONG PASSWORD").code(401);
                 var result = await models.image.findByIdAndDelete(request.params.id);
                 return h.response(result);
             } catch (error) {

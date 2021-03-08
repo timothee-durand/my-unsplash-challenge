@@ -1,6 +1,7 @@
 <template>
   <div class="item">
-    <img :src="src" :alt="label" :style='"--label: \"" + label +"\""'/>
+    <button class="delete-button" @click="$emit('delPhoto', id)">delete</button>
+    <img :src="src" :alt="label"  :style='"--label: \"" + label +"\""'/>
     <p class="label">{{ label }}</p>
   </div>
 
@@ -17,6 +18,9 @@ export default {
     label: {
       type: String,
       default: "Label"
+    },
+    id:{
+      required:true
     }
   },
 }
@@ -56,6 +60,30 @@ export default {
 
 .item:hover .label {
   transform: translateX(0);
+}
+
+.delete-button {
+  border: 1px solid #EB5757;
+  color: #EB5757;
+  background-color: transparent;
+  border-radius: 38px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.5rem 1.5rem;
+  margin: 1.8rem;
+  z-index: 10;
+  transform: translateY(-100px);
+  transition: transform ease 200ms, background-color 200ms ease, color 200ms ease;
+}
+
+.delete-button:hover {
+  background-color: #EB5757;
+  color: white;
+}
+
+.item:hover .delete-button {
+  transform: translateY(0);
 }
 
 </style>

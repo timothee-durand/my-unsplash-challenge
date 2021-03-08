@@ -5,11 +5,10 @@
         <img src="./assets/my_unsplash_logo.svg" alt="Logo my unsplash"/>
 
         <form class="search flex items-center" @submit.prevent="searchImage">
-          <button type="submit" class="icon-button">
-          <span class="material-icons">
+          <span class="material-icons icon-search">
           search
           </span>
-          </button>
+
           <input type="search" v-model="query" placeholder="Search"/>
 
         </form>
@@ -19,31 +18,50 @@
       <button type="button" class="button-green" @click="openAddModal">Add a photo</button>
     </header>
     <div class="masonry">
-      <ImageUnsplash v-for="image in images" :key="image._id" :src="image.url" :label="image.label" class="item"/>
+      <ImageUnsplash v-for="image in images" :id="image._id" :key="image._id" :src="image.url" :label="image.label"
+                     class="item" @delPhoto="openDelModal"/>
     </div>
 
-    <div class="modal-backdrop">
-      <div class="modal">
-        <h2>Add a new photo</h2>
-        <form @submit="addPhoto">
-          <div class="input-group">
-            <label for="label">Label</label>
-            <input type="text" id="label" placeholder="A person walk near the water"/>
-          </div>
+    <Modal :show-modal="showModal">
+      <h2>Add a new photo</h2>
+      <form @submit.prevent="addPhoto">
+        <div class="input-group mt-2">
+          <label for="label">Label</label>
+          <input type="text" id="label" required placeholder="A person walk near the water"
+                 v-model="imageToAdd.label"/>
+        </div>
 
-          <div class="input-group">
-            <label for="url">Photo URL</label>
-            <input type="url" id="url" placeholder="https://images.unsplash.com/photo-65rem8rt"/>
-          </div>
+        <div class="input-group mt-2">
+          <label for="url">Photo URL</label>
+          <input type="url" id="url" required placeholder="https://images.unsplash.com/photo-65rem8rt"
+                 v-model="imageToAdd.url"/>
+        </div>
 
-          <div class="flex end">
-            <button class="button-gey" type="button">Cancel</button>
-            <button class="button-green" type="submit">Submit</button>
+        <div class="flex end mt-2">
+          <button class="button-gey" type="button" @click="showModal = false">Cancel</button>
+          <button class="button-green" type="submit">Submit</button>
 
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </Modal>
+
+    <Modal :show-modal="showDelete">
+      <h2>Are you sure ?</h2>
+      <form @submit.prevent="delPhoto" ref="delete">
+
+        <div class="input-group mt-2">
+          <label for="pswd">Password</label>
+          <input type="password" id="pswd" required placeholder="password" v-model="imageToDel.password"/>
+        </div>
+
+        <div class="flex end mt-2">
+          <button class="button-gey" type="button" @click="showDelete = false">Cancel</button>
+          <button class="button-green" type="submit">Submit</button>
+        </div>
+
+        <p class="wrong-password-message" v-if="wrongPassword">Wrong password</p>
+      </form>
+    </Modal>
 
   </div>
 </template>
@@ -53,22 +71,43 @@
 import axios from "axios";
 import params from "./params/params.js";
 import ImageUnsplash from "./components/ImageUnsplash.vue";
+import qs from "qs";
+import Modal from "./Modal.vue";
 
 export default {
   name: "App",
-  components: {ImageUnsplash},
+  components: {Modal, ImageUnsplash},
   data() {
     return {
-      images: [],
+      imagesApi: [],
       query: "",
+      imageToAdd: {
+        label: "",
+        url: ""
+      },
+      imageToDel: {
+        id: "",
+        password: ""
+      },
+      showModal: false,
+      showDelete: false,
+      wrongPassword: false,
+    }
+  },
+  computed: {
+    images() {
+      let images = this.imagesApi;
+      images = images.filter((img) => {
+        if (this.query === "") return true;
+        //console.log(img.label, this.query, img.label.toLowerCase().includes(this.query.toLowerCase()))
+        return img.label.toLowerCase().includes(this.query.toLowerCase());
+      })
+      //console.log(images)
+      return images.reverse();
     }
   },
   mounted() {
-    axios.get(params.routes.images)
-        .then(data => {
-          console.log("images", data.data)
-          this.images = data.data
-        })
+    this.getPhoto();
     console.log("hey")
   },
   methods: {
@@ -78,12 +117,67 @@ export default {
       }
     },
     openAddModal() {
+      this.showModal = true;
+    },
+    searchImage() {
 
     },
-    searchImage(){
+    openDelModal(payload) {
+
+      this.showDelete = true;
+      this.imageToDel.id = payload;
+      console.log(this.imageToDel)
+    },
+    async addPhoto() {
+      this.imageToDel.password = "";
+      await axios({
+        method: 'post',
+        url: params.routes.images,
+        data: qs.stringify(this.imageToAdd),
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
+        }
+      })
+      this.showModal = false;
+      await this.getPhoto()
 
     },
-    addPhoto(){
+    async getPhoto() {
+      let result = await axios.get(params.routes.images)
+      console.log("images", result.data)
+      this.imagesApi = result.data
+    },
+    async delPhoto() {
+      let result;
+      try {
+        result = await axios({
+          method: 'delete',
+          url: params.routes.images + "/" + this.imageToDel.id,
+          data: qs.stringify(this.imageToDel),
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded;charset=utf-8'
+          }
+        })
+      } catch (e) {
+        console.log(e.data);
+        console.log("status", result.status)
+        if (e.status === 401) {
+          this.wrongPassword = true;
+        } else {
+          this.wrongPassword = false;
+          await this.getPhoto()
+          this.showDelete = false;
+        }
+      }
+
+      if (result.status === 401) {
+        this.wrongPassword = true;
+      } else {
+        this.wrongPassword = false;
+        await this.getPhoto()
+        this.showDelete = false;
+      }
+
 
     }
   },
@@ -137,6 +231,18 @@ html {
   align-items: center;
 }
 
+.center {
+  justify-content: center;
+}
+
+.mt-2 {
+  margin-top: 2rem;
+}
+
+.end {
+  justify-content: flex-end;
+}
+
 
 form.search, input {
   width: 100%;
@@ -155,12 +261,12 @@ input::placeholder {
 }
 
 input:focus {
-  outline:none;
+  outline: none;
 }
 
 form.search > input {
   border: none;
-  filter:none;
+  filter: none;
   background: none;
 }
 
@@ -177,24 +283,39 @@ header {
 
 button {
   cursor: pointer;
-}
-
-.button-green {
-  background: #3DB46D;
   box-shadow: 0px 1px 6px rgba(0, 0, 0, 0.1);
   border-radius: 12px;
-  color:white;
-  border:none;
+  border: none;
   padding: 1.6rem 2rem;
   transition: color ease 200ms, background-color ease 200ms, box-shadow ease 200ms;
   will-change: auto;
 }
 
+.button-green {
+  background: #3DB46D;
+  color: white;
+  margin-left: 10px;
+}
+
+.mt-4 {
+  margin-top: 4rem;
+}
+
+button:hover, button:focus {
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  outline: none;
+}
+
 .button-green:hover, .button-green:focus {
   background-color: #fff;
-  color:#3DB46D;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-  outline:none;
+  color: #3DB46D;
 }
+
+.icon-search {
+  color: #BDBDBD;
+  display: block;
+  padding: 0 1rem;
+}
+
 
 </style>
